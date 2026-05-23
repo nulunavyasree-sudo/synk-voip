@@ -1,0 +1,1509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Synk — Video Calls Reimagined</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080c10;
+    --surface: #0e1318;
+    --panel: #131a22;
+    --border: #1e2a35;
+    --accent: #00d4ff;
+    --accent2: #7b5ea7;
+    --green: #00e676;
+    --red: #ff3d5a;
+    --amber: #ffb830;
+    --text: #e8edf2;
+    --muted: #5a6a7a;
+    --glass: rgba(14,19,24,0.85);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Syne', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── LOBBY ── */
+  #lobby {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    gap: 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #lobby::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 20% 20%, rgba(0,212,255,0.07) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 50% at 80% 80%, rgba(123,94,167,0.09) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .grid-bg {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(30,42,53,0.4) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(30,42,53,0.4) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  .lobby-card {
+    position: relative;
+    z-index: 1;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 48px 56px;
+    width: 440px;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,212,255,0.05);
+  }
+
+  .logo {
+    font-size: 36px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 6px;
+  }
+
+  .tagline {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 36px;
+  }
+
+  .field-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .field-input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    margin-bottom: 20px;
+  }
+
+  .field-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,212,255,0.1);
+  }
+
+  .btn-primary {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, var(--accent), #0099cc);
+    border: none;
+    border-radius: 10px;
+    color: var(--bg);
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(0,212,255,0.3);
+  }
+
+  .btn-secondary {
+    width: 100%;
+    padding: 14px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  .btn-secondary:hover {
+    border-color: var(--accent2);
+    background: rgba(123,94,167,0.1);
+  }
+
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 20px 0;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+  }
+
+  .divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── CALL ROOM ── */
+  #callRoom {
+    display: none;
+    flex-direction: column;
+    height: 100vh;
+    position: relative;
+  }
+
+  /* Top bar */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    z-index: 10;
+  }
+
+  .topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .topbar-logo {
+    font-size: 18px;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .room-id-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 10px;
+    color: var(--muted);
+  }
+
+  .call-timer {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--green);
+    background: rgba(0,230,118,0.08);
+    border: 1px solid rgba(0,230,118,0.2);
+    border-radius: 6px;
+    padding: 4px 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .call-timer::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 1.5s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .rec-indicator {
+    display: none;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--red);
+    background: rgba(255,61,90,0.1);
+    border: 1px solid rgba(255,61,90,0.3);
+    border-radius: 6px;
+    padding: 4px 10px;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .rec-indicator.active { display: flex; }
+
+  .rec-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--red);
+    animation: pulse 1s infinite;
+  }
+
+  /* Main layout */
+  .room-body {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Video grid */
+  .video-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .video-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 3px;
+    padding: 3px;
+    background: var(--bg);
+  }
+
+  .video-grid.screen-active {
+    grid-template-columns: 1fr 260px;
+    grid-template-rows: 1fr;
+  }
+
+  .video-grid.screen-active .screen-tile {
+    grid-column: 1;
+    grid-row: 1;
+    display: flex;
+  }
+
+  .video-grid.screen-active .vid-tile:not(.screen-tile) {
+    display: none;
+  }
+
+  .video-grid.screen-active .sidebar-videos {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .vid-tile {
+    background: var(--surface);
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+  }
+
+  .screen-tile {
+    display: none;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #000;
+    position: relative;
+    min-height: 0;
+  }
+
+  .sidebar-videos {
+    display: none;
+  }
+
+  .sidebar-vid {
+    flex: 1;
+    background: var(--surface);
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+  }
+
+  video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .vid-tile video, .sidebar-vid video {
+    transform: scaleX(-1); /* mirror self-view */
+  }
+
+  .vid-tile video.no-mirror, .sidebar-vid video.no-mirror {
+    transform: none;
+  }
+
+  .vid-label {
+    position: absolute;
+    bottom: 10px;
+    left: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    background: rgba(8,12,16,0.75);
+    backdrop-filter: blur(8px);
+    border-radius: 6px;
+    padding: 3px 10px;
+    color: var(--text);
+    letter-spacing: 0.3px;
+  }
+
+  .vid-muted-icon {
+    position: absolute;
+    bottom: 10px;
+    right: 12px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(255,61,90,0.15);
+    border: 1px solid rgba(255,61,90,0.4);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+  }
+
+  .vid-muted-icon.show { display: flex; }
+
+  .avatar-placeholder {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  /* Screen share view */
+  .screen-preview {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    background: #000;
+  }
+
+  .screen-label {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: rgba(0,212,255,0.15);
+    border: 1px solid rgba(0,212,255,0.4);
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* Sidebar panel */
+  .sidebar {
+    width: 300px;
+    background: var(--panel);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .sidebar-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .stab {
+    flex: 1;
+    padding: 12px 8px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.2s;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+
+  .stab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  .stab-panel {
+    display: none;
+    flex: 1;
+    overflow-y: auto;
+    flex-direction: column;
+  }
+
+  .stab-panel.active {
+    display: flex;
+  }
+
+  /* Chat */
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .chat-msg {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .chat-msg-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .chat-msg-name {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .chat-msg-time {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  .chat-msg-text {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text);
+    background: var(--surface);
+    border-radius: 8px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+  }
+
+  .chat-msg.me .chat-msg-name { color: var(--accent2); }
+
+  .chat-input-row {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--panel);
+  }
+
+  .chat-input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 12px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    resize: none;
+    height: 38px;
+  }
+
+  .chat-input:focus { border-color: var(--accent); }
+
+  .chat-send-btn {
+    width: 38px;
+    height: 38px;
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    color: var(--bg);
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.2s;
+  }
+
+  .chat-send-btn:hover { background: #00b8d9; }
+
+  /* Participants panel */
+  .participants-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .participant-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--surface);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+
+  .p-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .p-name {
+    font-size: 13px;
+    font-weight: 600;
+    flex: 1;
+  }
+
+  .p-status-icons {
+    display: flex;
+    gap: 6px;
+    font-size: 13px;
+  }
+
+  /* YouTube panel */
+  .yt-panel-content {
+    flex: 1;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .yt-panel-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  .yt-input-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .yt-url-input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 12px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    outline: none;
+  }
+
+  .yt-url-input:focus { border-color: var(--red); }
+
+  .yt-load-btn {
+    padding: 9px 14px;
+    background: #ff0000;
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-family: 'Syne', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s;
+  }
+
+  .yt-load-btn:hover { background: #cc0000; }
+
+  .yt-preview {
+    background: #000;
+    border-radius: 10px;
+    overflow: hidden;
+    aspect-ratio: 16/9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+  }
+
+  .yt-preview iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+
+  .yt-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .yt-placeholder-icon { font-size: 36px; }
+
+  .yt-share-btn {
+    width: 100%;
+    padding: 11px;
+    background: rgba(255,0,0,0.1);
+    border: 1px solid rgba(255,0,0,0.3);
+    border-radius: 8px;
+    color: #ff4444;
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .yt-share-btn:hover { background: rgba(255,0,0,0.2); }
+
+  /* Controls bar */
+  .controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 16px 20px;
+    background: var(--panel);
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+
+  .ctrl-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 60px;
+    color: var(--text);
+  }
+
+  .ctrl-btn:hover {
+    border-color: var(--accent);
+    background: rgba(0,212,255,0.06);
+  }
+
+  .ctrl-btn.active {
+    background: rgba(0,212,255,0.12);
+    border-color: rgba(0,212,255,0.5);
+    color: var(--accent);
+  }
+
+  .ctrl-btn.danger {
+    background: rgba(255,61,90,0.1);
+    border-color: rgba(255,61,90,0.3);
+    color: var(--red);
+  }
+
+  .ctrl-btn.danger:hover {
+    background: rgba(255,61,90,0.25);
+    border-color: var(--red);
+  }
+
+  .ctrl-btn.rec-active {
+    background: rgba(255,61,90,0.15);
+    border-color: var(--red);
+    color: var(--red);
+  }
+
+  .ctrl-icon { font-size: 20px; line-height: 1; }
+  .ctrl-label { font-size: 9px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; font-family: 'DM Mono', monospace; }
+
+  .ctrl-end {
+    background: var(--red) !important;
+    border-color: var(--red) !important;
+    color: #fff !important;
+    min-width: 80px;
+  }
+
+  .ctrl-end:hover { background: #cc1f3a !important; }
+
+  /* Toast notification */
+  .toast {
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 20px;
+    font-size: 13px;
+    color: var(--text);
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 1000;
+    white-space: nowrap;
+    font-family: 'DM Mono', monospace;
+    pointer-events: none;
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .toast.success { border-color: rgba(0,230,118,0.5); color: var(--green); }
+  .toast.error { border-color: rgba(255,61,90,0.5); color: var(--red); }
+  .toast.info { border-color: rgba(0,212,255,0.5); color: var(--accent); }
+
+  /* Camera permission overlay */
+  .perm-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(8,12,16,0.92);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+  }
+
+  .perm-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 40px;
+    width: 380px;
+    text-align: center;
+  }
+
+  .perm-icon { font-size: 48px; margin-bottom: 16px; }
+
+  .perm-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+
+  .perm-desc {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-bottom: 24px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* Animations */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .lobby-card { animation: fadeIn 0.4s ease; }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════
+     LOBBY SCREEN
+════════════════════════════════════════════════════════ -->
+<div id="lobby">
+  <div class="grid-bg"></div>
+  <div class="lobby-card">
+    <div class="logo">Synk</div>
+    <div class="tagline">Video · Share · Record</div>
+
+    <div class="field-label">Your Display Name</div>
+    <input class="field-input" id="displayName" placeholder="e.g. Alex Rivera" maxlength="24" />
+
+    <div class="field-label">Room ID</div>
+    <input class="field-input" id="roomIdInput" placeholder="e.g. movie-night-42" maxlength="30" />
+
+    <button class="btn-primary" onclick="joinCall()">🎥 &nbsp;Create / Join Room</button>
+
+    <div class="divider">or</div>
+
+    <button class="btn-secondary" onclick="joinCall(true)">🎲 &nbsp;Quick Join Demo Room</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     CALL ROOM
+════════════════════════════════════════════════════════ -->
+<div id="callRoom">
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <span class="topbar-logo">Synk</span>
+      <span class="room-id-badge" id="roomBadge">room: —</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="rec-indicator" id="recIndicator">
+        <span class="rec-dot"></span> REC
+      </div>
+      <div class="call-timer" id="callTimer">00:00</div>
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div class="room-body">
+    <!-- Video area -->
+    <div class="video-area">
+      <div class="video-grid" id="videoGrid">
+
+        <!-- Local tile -->
+        <div class="vid-tile" id="localTile">
+          <video id="localVideo" autoplay muted playsinline></video>
+          <div class="avatar-placeholder" id="localAvatar" style="display:none">?</div>
+          <div class="vid-label" id="localLabel">You</div>
+          <div class="vid-muted-icon" id="localMutedIcon">🔇</div>
+        </div>
+
+        <!-- Remote tile (simulated peer) -->
+        <div class="vid-tile" id="remoteTile">
+          <div class="avatar-placeholder" id="remoteAvatar">👤</div>
+          <div class="vid-label" id="remoteLabel">Waiting for peer…</div>
+          <div class="vid-muted-icon" id="remoteMutedIcon"></div>
+        </div>
+
+        <!-- Screen share tile -->
+        <div class="screen-tile" id="screenTile">
+          <video id="screenVideo" class="screen-preview no-mirror" autoplay muted playsinline></video>
+          <div class="screen-label" id="screenLabel">📺 Screen Share</div>
+        </div>
+
+        <!-- Sidebar videos (shown during screen share) -->
+        <div class="sidebar-videos" id="sidebarVideos">
+          <div class="sidebar-vid">
+            <video id="sidebarLocal" autoplay muted playsinline></video>
+            <div class="vid-label">You</div>
+          </div>
+          <div class="sidebar-vid">
+            <div class="avatar-placeholder" style="width:44px;height:44px;font-size:18px">👤</div>
+            <div class="vid-label" id="sidebarRemoteLabel">Peer</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar panel -->
+    <div class="sidebar">
+      <div class="sidebar-tabs">
+        <button class="stab active" onclick="switchTab('chat',this)">Chat</button>
+        <button class="stab" onclick="switchTab('people',this)">People</button>
+        <button class="stab" onclick="switchTab('youtube',this)">YouTube</button>
+      </div>
+
+      <!-- Chat panel -->
+      <div class="stab-panel active" id="tab-chat">
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="chat-input-row">
+          <textarea class="chat-input" id="chatInput" placeholder="Message…" rows="1" onkeydown="chatKeydown(event)"></textarea>
+          <button class="chat-send-btn" onclick="sendChat()">➤</button>
+        </div>
+      </div>
+
+      <!-- People panel -->
+      <div class="stab-panel" id="tab-people">
+        <div class="participants-list" id="participantsList">
+          <!-- populated by JS -->
+        </div>
+      </div>
+
+      <!-- YouTube panel -->
+      <div class="stab-panel" id="tab-youtube">
+        <div class="yt-panel-content">
+          <div class="yt-panel-title">YouTube Co-Watch</div>
+          <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:4px;">
+            Paste a YouTube URL to load it below, then share your screen to watch together.
+          </div>
+
+          <div class="yt-input-row">
+            <input class="yt-url-input" id="ytUrlInput" placeholder="https://www.youtube.com/watch?v=…" />
+            <button class="yt-load-btn" onclick="loadYoutube()">Load</button>
+          </div>
+
+          <div class="yt-preview" id="ytPreview">
+            <div class="yt-placeholder">
+              <div class="yt-placeholder-icon">▶️</div>
+              <div>No video loaded</div>
+            </div>
+          </div>
+
+          <button class="yt-share-btn" onclick="shareYouTubeScreen()">📺 &nbsp;Share Screen for Co-Watch</button>
+
+          <div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;line-height:1.5;margin-top:4px;">
+            Note: Use "Share Screen → Browser Tab" and select the YouTube tab to comply with browser security policies.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <button class="ctrl-btn" id="btnMic" onclick="toggleMic()">
+      <span class="ctrl-icon">🎙️</span>
+      <span class="ctrl-label" id="micLabel">Mute</span>
+    </button>
+
+    <button class="ctrl-btn" id="btnCam" onclick="toggleCam()">
+      <span class="ctrl-icon">📷</span>
+      <span class="ctrl-label" id="camLabel">Camera</span>
+    </button>
+
+    <button class="ctrl-btn" id="btnScreen" onclick="toggleScreen()">
+      <span class="ctrl-icon">🖥️</span>
+      <span class="ctrl-label" id="screenLabel2">Share</span>
+    </button>
+
+    <button class="ctrl-btn" id="btnRecord" onclick="toggleRecord()">
+      <span class="ctrl-icon">⏺️</span>
+      <span class="ctrl-label" id="recLabel">Record</span>
+    </button>
+
+    <button class="ctrl-btn" onclick="copyRoomLink()">
+      <span class="ctrl-icon">🔗</span>
+      <span class="ctrl-label">Invite</span>
+    </button>
+
+    <button class="ctrl-btn danger ctrl-end" onclick="endCall()">
+      <span class="ctrl-icon">📵</span>
+      <span class="ctrl-label">End Call</span>
+    </button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ══════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════ */
+let localStream = null;
+let screenStream = null;
+let mediaRecorder = null;
+let recordedChunks = [];
+let isRecording = false;
+let isMuted = false;
+let isCamOff = false;
+let isScreenSharing = false;
+let timerInterval = null;
+let callSeconds = 0;
+let currentUser = '';
+let currentRoom = '';
+
+/* ══════════════════════════════════════════════
+   LOBBY → CALL
+══════════════════════════════════════════════ */
+async function joinCall(quick = false) {
+  let name = document.getElementById('displayName').value.trim();
+  let room = document.getElementById('roomIdInput').value.trim();
+
+  if (quick) {
+    name = name || 'Guest_' + Math.floor(Math.random() * 1000);
+    room = 'demo-room-' + Math.floor(Math.random() * 99 + 1);
+  }
+
+  if (!name) { showToast('Enter your display name', 'error'); return; }
+  if (!room) { showToast('Enter a room ID', 'error'); return; }
+
+  currentUser = name;
+  currentRoom = room;
+
+  document.getElementById('roomBadge').textContent = 'room: ' + room;
+  document.getElementById('localLabel').textContent = name + ' (you)';
+  document.getElementById('localAvatar').textContent = name[0].toUpperCase();
+
+  // Update participants
+  renderParticipants([
+    { name, self: true },
+    { name: 'Waiting…', self: false }
+  ]);
+
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    document.getElementById('localVideo').srcObject = localStream;
+    document.getElementById('localVideo').style.display = 'block';
+    document.getElementById('localAvatar').style.display = 'none';
+    document.getElementById('sidebarLocal').srcObject = localStream;
+  } catch (e) {
+    showToast('Camera/mic not available — demo mode', 'info');
+    document.getElementById('localVideo').style.display = 'none';
+    document.getElementById('localAvatar').style.display = 'flex';
+    document.getElementById('localAvatar').textContent = name[0].toUpperCase();
+  }
+
+  // Switch screens
+  document.getElementById('lobby').style.display = 'none';
+  document.getElementById('callRoom').style.display = 'flex';
+
+  startTimer();
+  addChatMsg('System', `${name} joined the room`, true);
+  showToast('Joined ' + room, 'success');
+
+  // Simulate peer joining after 2.5s
+  setTimeout(simulatePeerJoin, 2500);
+}
+
+function simulatePeerJoin() {
+  const peers = ['Jordan K.', 'Sam B.', 'Riley M.', 'Taylor J.'];
+  const peer = peers[Math.floor(Math.random() * peers.length)];
+  document.getElementById('remoteLabel').textContent = peer;
+  document.getElementById('remoteAvatar').textContent = peer[0].toUpperCase();
+  document.getElementById('sidebarRemoteLabel').textContent = peer;
+  renderParticipants([{ name: currentUser, self: true }, { name: peer, self: false }]);
+  addChatMsg('System', `${peer} joined the room`, true);
+  showToast(peer + ' joined', 'success');
+
+  // Simulate peer messages
+  setTimeout(() => addChatMsg(peer, 'Hey! Great to see you 👋'), 4000);
+  setTimeout(() => addChatMsg(peer, 'Should we watch something on YouTube?'), 9000);
+}
+
+/* ══════════════════════════════════════════════
+   TIMER
+══════════════════════════════════════════════ */
+function startTimer() {
+  callSeconds = 0;
+  timerInterval = setInterval(() => {
+    callSeconds++;
+    const m = String(Math.floor(callSeconds / 60)).padStart(2, '0');
+    const s = String(callSeconds % 60).padStart(2, '0');
+    document.getElementById('callTimer').lastChild.textContent = m + ':' + s;
+  }, 1000);
+}
+
+/* ══════════════════════════════════════════════
+   MIC / CAM TOGGLE
+══════════════════════════════════════════════ */
+function toggleMic() {
+  isMuted = !isMuted;
+  if (localStream) {
+    localStream.getAudioTracks().forEach(t => t.enabled = !isMuted);
+  }
+  const btn = document.getElementById('btnMic');
+  const icon = btn.querySelector('.ctrl-icon');
+  const label = document.getElementById('micLabel');
+  document.getElementById('localMutedIcon').classList.toggle('show', isMuted);
+  if (isMuted) {
+    icon.textContent = '🔇';
+    label.textContent = 'Unmute';
+    btn.classList.add('active');
+  } else {
+    icon.textContent = '🎙️';
+    label.textContent = 'Mute';
+    btn.classList.remove('active');
+  }
+  showToast(isMuted ? 'Microphone muted' : 'Microphone on', 'info');
+}
+
+function toggleCam() {
+  isCamOff = !isCamOff;
+  if (localStream) {
+    localStream.getVideoTracks().forEach(t => t.enabled = !isCamOff);
+  }
+  const btn = document.getElementById('btnCam');
+  const icon = btn.querySelector('.ctrl-icon');
+  const label = document.getElementById('camLabel');
+  document.getElementById('localAvatar').style.display = isCamOff ? 'flex' : 'none';
+  document.getElementById('localVideo').style.display = isCamOff ? 'none' : 'block';
+  if (isCamOff) {
+    icon.textContent = '🚫';
+    label.textContent = 'Show Cam';
+    btn.classList.add('active');
+  } else {
+    icon.textContent = '📷';
+    label.textContent = 'Camera';
+    btn.classList.remove('active');
+  }
+  showToast(isCamOff ? 'Camera off' : 'Camera on', 'info');
+}
+
+/* ══════════════════════════════════════════════
+   SCREEN SHARE
+══════════════════════════════════════════════ */
+async function toggleScreen() {
+  if (isScreenSharing) {
+    stopScreen();
+  } else {
+    await startScreen();
+  }
+}
+
+async function startScreen() {
+  try {
+    screenStream = await navigator.mediaDevices.getDisplayMedia({
+      video: { frameRate: 30 },
+      audio: false
+    });
+
+    const screenVideo = document.getElementById('screenVideo');
+    screenVideo.srcObject = screenStream;
+
+    isScreenSharing = true;
+
+    const grid = document.getElementById('videoGrid');
+    grid.classList.add('screen-active');
+    document.getElementById('screenTile').style.display = 'flex';
+    document.getElementById('sidebarVideos').style.display = 'flex';
+
+    const btn = document.getElementById('btnScreen');
+    btn.classList.add('active');
+    btn.querySelector('.ctrl-icon').textContent = '🛑';
+    document.getElementById('screenLabel2').textContent = 'Stop';
+
+    screenStream.getVideoTracks()[0].onended = () => stopScreen();
+
+    showToast('Screen sharing started', 'success');
+  } catch (e) {
+    if (e.name !== 'NotAllowedError') {
+      showToast('Screen share failed: ' + e.message, 'error');
+    } else {
+      showToast('Screen share cancelled', 'info');
+    }
+  }
+}
+
+function stopScreen() {
+  if (screenStream) {
+    screenStream.getTracks().forEach(t => t.stop());
+    screenStream = null;
+  }
+  isScreenSharing = false;
+
+  const grid = document.getElementById('videoGrid');
+  grid.classList.remove('screen-active');
+  document.getElementById('screenTile').style.display = 'none';
+  document.getElementById('sidebarVideos').style.display = 'none';
+  document.getElementById('screenVideo').srcObject = null;
+
+  const btn = document.getElementById('btnScreen');
+  btn.classList.remove('active');
+  btn.querySelector('.ctrl-icon').textContent = '🖥️';
+  document.getElementById('screenLabel2').textContent = 'Share';
+
+  showToast('Screen sharing stopped', 'info');
+}
+
+/* ══════════════════════════════════════════════
+   RECORDING
+══════════════════════════════════════════════ */
+async function toggleRecord() {
+  if (isRecording) {
+    stopRecording();
+  } else {
+    startRecording();
+  }
+}
+
+function startRecording() {
+  // Combine all available streams into one canvas stream, or use localStream
+  const streams = [];
+  if (localStream) streams.push(...localStream.getTracks());
+  if (screenStream) streams.push(...screenStream.getTracks());
+
+  // Build a combined stream for recording
+  let recordStream;
+  if (localStream) {
+    if (screenStream) {
+      // Merge: prefer screen video + local audio
+      const tracks = [
+        ...screenStream.getVideoTracks(),
+        ...localStream.getAudioTracks()
+      ];
+      recordStream = new MediaStream(tracks);
+    } else {
+      recordStream = localStream;
+    }
+  } else {
+    showToast('No media stream to record', 'error');
+    return;
+  }
+
+  const options = { mimeType: '' };
+  const types = [
+    'video/webm;codecs=vp9,opus',
+    'video/webm;codecs=vp8,opus',
+    'video/webm',
+    'video/mp4'
+  ];
+  for (const t of types) {
+    if (MediaRecorder.isTypeSupported(t)) { options.mimeType = t; break; }
+  }
+
+  try {
+    mediaRecorder = new MediaRecorder(recordStream, options);
+  } catch (e) {
+    mediaRecorder = new MediaRecorder(recordStream);
+  }
+
+  recordedChunks = [];
+  mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+  mediaRecorder.onstop = saveRecording;
+  mediaRecorder.start(1000);
+
+  isRecording = true;
+  document.getElementById('recIndicator').classList.add('active');
+  document.getElementById('btnRecord').classList.add('rec-active');
+  document.getElementById('recLabel').textContent = 'Stop Rec';
+  document.getElementById('btnRecord').querySelector('.ctrl-icon').textContent = '⏹️';
+  showToast('Recording started', 'success');
+}
+
+function stopRecording() {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    mediaRecorder.stop();
+  }
+  isRecording = false;
+  document.getElementById('recIndicator').classList.remove('active');
+  document.getElementById('btnRecord').classList.remove('rec-active');
+  document.getElementById('recLabel').textContent = 'Record';
+  document.getElementById('btnRecord').querySelector('.ctrl-icon').textContent = '⏺️';
+}
+
+function saveRecording() {
+  const mimeType = mediaRecorder.mimeType || 'video/webm';
+  const blob = new Blob(recordedChunks, { type: mimeType });
+  const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `synk-recording-${currentRoom}-${Date.now()}.${ext}`;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 2000);
+  showToast(`Recording saved (${(blob.size / 1024 / 1024).toFixed(1)} MB)`, 'success');
+}
+
+/* ══════════════════════════════════════════════
+   YOUTUBE CO-WATCH
+══════════════════════════════════════════════ */
+function loadYoutube() {
+  const raw = document.getElementById('ytUrlInput').value.trim();
+  if (!raw) { showToast('Enter a YouTube URL', 'error'); return; }
+
+  const videoId = extractYouTubeId(raw);
+  if (!videoId) { showToast('Invalid YouTube URL', 'error'); return; }
+
+  const preview = document.getElementById('ytPreview');
+  preview.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0" allowfullscreen allow="autoplay; encrypted-media"></iframe>`;
+  showToast('Video loaded — share your screen to co-watch!', 'success');
+  switchTabByName('youtube');
+}
+
+function extractYouTubeId(url) {
+  const patterns = [
+    /[?&]v=([^&#]+)/,
+    /youtu\.be\/([^?&#]+)/,
+    /youtube\.com\/embed\/([^?&#]+)/,
+    /youtube\.com\/shorts\/([^?&#]+)/
+  ];
+  for (const p of patterns) {
+    const m = url.match(p);
+    if (m) return m[1];
+  }
+  return null;
+}
+
+async function shareYouTubeScreen() {
+  showToast('Select the YouTube browser tab to share', 'info');
+  await startScreen();
+}
+
+/* ══════════════════════════════════════════════
+   CHAT
+══════════════════════════════════════════════ */
+function addChatMsg(sender, text, isSystem = false) {
+  const isMe = sender === currentUser;
+  const container = document.getElementById('chatMessages');
+  const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  if (isSystem) {
+    const div = document.createElement('div');
+    div.style.cssText = 'text-align:center;font-family:"DM Mono",monospace;font-size:10px;color:var(--muted);padding:2px 0;';
+    div.textContent = text;
+    container.appendChild(div);
+  } else {
+    const div = document.createElement('div');
+    div.className = 'chat-msg' + (isMe ? ' me' : '');
+    div.innerHTML = `
+      <div class="chat-msg-meta">
+        <span class="chat-msg-name">${escHtml(sender)}</span>
+        <span class="chat-msg-time">${time}</span>
+      </div>
+      <div class="chat-msg-text">${escHtml(text)}</div>
+    `;
+    container.appendChild(div);
+  }
+  container.scrollTop = container.scrollHeight;
+}
+
+function sendChat() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+  addChatMsg(currentUser, text);
+  input.value = '';
+}
+
+function chatKeydown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ══════════════════════════════════════════════
+   PARTICIPANTS
+══════════════════════════════════════════════ */
+function renderParticipants(people) {
+  const list = document.getElementById('participantsList');
+  list.innerHTML = people.map(p => `
+    <div class="participant-item">
+      <div class="p-avatar">${(p.name[0] || '?').toUpperCase()}</div>
+      <span class="p-name">${escHtml(p.name)}${p.self ? ' <span style="font-size:10px;color:var(--muted)">(you)</span>' : ''}</span>
+      <div class="p-status-icons">
+        ${p.self ? (isMuted ? '🔇' : '🎙️') : '🎙️'}
+        ${p.self ? (isCamOff ? '🚫' : '📷') : '📷'}
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ══════════════════════════════════════════════
+   TABS
+══════════════════════════════════════════════ */
+function switchTab(name, btn) {
+  document.querySelectorAll('.stab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.stab-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+function switchTabByName(name) {
+  const btns = document.querySelectorAll('.stab');
+  const panels = ['chat', 'people', 'youtube'];
+  const idx = panels.indexOf(name);
+  if (idx < 0) return;
+  btns.forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.stab-panel').forEach(p => p.classList.remove('active'));
+  btns[idx].classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+/* ══════════════════════════════════════════════
+   UTILITY
+══════════════════════════════════════════════ */
+function copyRoomLink() {
+  const link = `${location.origin}${location.pathname}?room=${encodeURIComponent(currentRoom)}`;
+  navigator.clipboard.writeText(link).then(
+    () => showToast('Invite link copied!', 'success'),
+    () => showToast('Room: ' + currentRoom, 'info')
+  );
+}
+
+function endCall() {
+  if (isRecording) stopRecording();
+  if (screenStream) stopScreen();
+  if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+  clearInterval(timerInterval);
+  document.getElementById('callRoom').style.display = 'none';
+  document.getElementById('lobby').style.display = 'flex';
+  // Reset grid
+  document.getElementById('videoGrid').classList.remove('screen-active');
+  showToast('Call ended', 'info');
+}
+
+let toastTimeout;
+function showToast(msg, type = 'info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// Pre-fill room from URL param if present
+(function() {
+  const params = new URLSearchParams(location.search);
+  if (params.get('room')) document.getElementById('roomIdInput').value = params.get('room');
+})();
+</script>
+</body>
+</html>
